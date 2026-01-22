@@ -13,10 +13,49 @@ Converts a PRD markdown document into the prd.json format for the execution loop
 
 1. Read the PRD markdown file
 2. Extract tasks (from Tasks section or User Stories)
-3. Order by dependencies (schema → backend → UI → tests)
-4. Output to the specified prd.json location
+3. **Explode each task into granular, machine-verifiable sub-tasks**
+4. Order by dependencies (schema → backend → UI → tests)
+5. Output to the specified prd.json location
 
 **Autonomous mode:** Do not ask questions. Use the PRD content and any provided context (branch name, output path) to generate prd.json immediately.
+
+---
+
+## Critical: Agent-Testable Tasks
+
+Every task must be **autonomously verifiable** by an AI agent without human intervention.
+
+### The Golden Rule
+
+Each acceptance criterion must be a **boolean check** that an agent can definitively pass or fail:
+
+**❌ BAD - Vague/subjective:**
+- "Works correctly"
+- "Review the configuration"
+- "Document the findings"
+- "Identify the issue"
+- "Verify it looks good"
+
+**✅ GOOD - Machine-verifiable:**
+- "Run `npm run typecheck` - exits with code 0"
+- "Navigate to /signup - page loads without console errors"
+- "Click submit button - form submits and redirects to /dashboard"
+- "File `src/auth/config.ts` contains `redirectUrl: '/onboarding'`"
+- "API response status is 200 and body contains `{ success: true }`"
+
+### Acceptance Criteria Patterns
+
+Use these patterns for agent-testable criteria:
+
+| Type | Pattern | Example |
+|------|---------|---------|
+| Command | "Run `[cmd]` - exits with code 0" | "Run `npm test` - exits with code 0" |
+| File check | "File `[path]` contains `[string]`" | "File `middleware.ts` contains `clerkMiddleware`" |
+| Browser nav | "Navigate to `[url]` - [expected result]" | "Navigate to /login - SignIn component renders" |
+| Browser action | "Click `[element]` - [expected result]" | "Click 'Submit' button - redirects to /dashboard" |
+| Console check | "Browser console shows no errors" | |
+| API check | "GET/POST `[url]` returns `[status]` with `[body]`" | "POST /api/signup returns 200" |
+| Screenshot | "Screenshot shows `[element]` visible at `[location]`" | "Screenshot shows CTA button above fold" |
 
 ---
 
@@ -38,12 +77,12 @@ Create `prd.json`:
   "tasks": [
     {
       "id": "T-001",
-      "title": "[Task title]",
-      "description": "[What to implement]",
+      "title": "[Specific action verb] [specific target]",
+      "description": "[1-2 sentences: what to do and why]",
       "acceptanceCriteria": [
-        "Specific verifiable criterion",
-        "Another criterion",
-        "Quality checks pass"
+        "Specific machine-verifiable criterion with expected outcome",
+        "Another criterion with pass/fail condition",
+        "Run `npm run typecheck` - exits with code 0"
       ],
       "priority": 1,
       "passes": false,
@@ -55,52 +94,140 @@ Create `prd.json`:
 
 ---
 
-## Conversion Rules
+## Task Granularity Rules
 
-### Task Sizing
+### Target: 8-15 tasks per PRD
+
+PRDs should typically generate 8-15 granular tasks. If you have fewer than 6, you probably need to split tasks further.
+
+### Split Multi-Step Tasks
+
+**❌ TOO BIG:**
+```json
+{
+  "title": "Test signup flow and fix issues",
+  "acceptanceCriteria": [
+    "Test the signup flow",
+    "Identify any issues", 
+    "Fix the issues",
+    "Verify the fix works"
+  ]
+}
+```
+
+**✅ PROPERLY SPLIT:**
+```json
+[
+  {
+    "id": "T-001",
+    "title": "Navigate to signup page and capture baseline",
+    "acceptanceCriteria": [
+      "Navigate to /signup - page loads successfully",
+      "Screenshot saved to tmp/signup-baseline.png",
+      "Browser console errors logged to tmp/signup-console.log"
+    ]
+  },
+  {
+    "id": "T-002", 
+    "title": "Test email input field validation",
+    "acceptanceCriteria": [
+      "Enter 'invalid-email' in email field - error message appears",
+      "Enter 'valid@example.com' - error message disappears",
+      "Field has aria-invalid='true' when invalid"
+    ]
+  },
+  {
+    "id": "T-003",
+    "title": "Test form submission with valid data",
+    "acceptanceCriteria": [
+      "Fill email: 'test@example.com', password: 'TestPass123!'",
+      "Click submit button - loading state appears",
+      "After submit - redirects to /onboarding OR error message appears"
+    ]
+  }
+]
+```
+
+### One Concern Per Task
+
+Each task should do ONE thing:
+
+| Concern | Separate Task |
+|---------|---------------|
+| Navigate to page | T-001 |
+| Check for errors | T-002 |
+| Test input validation | T-003 |
+| Test form submission | T-004 |
+| Verify redirect | T-005 |
+| Test mobile viewport | T-006 |
+| Implement fix | T-007 |
+| Verify fix on desktop | T-008 |
+| Verify fix on mobile | T-009 |
+
+### Investigation vs Implementation
+
+**Never combine "find the problem" with "fix the problem"** in one task.
+
+```json
+[
+  {
+    "id": "T-001",
+    "title": "Check Clerk SignUp component configuration",
+    "description": "Verify the Clerk SignUp component props match expected values",
+    "acceptanceCriteria": [
+      "File app/(public)/free-trial/page.tsx exists",
+      "File contains <SignUp component",
+      "SignUp has routing prop (log value to notes)",
+      "SignUp has forceRedirectUrl prop (log value to notes)",
+      "Run `npm run typecheck` - exits with code 0"
+    ]
+  },
+  {
+    "id": "T-002",
+    "title": "Check middleware auth configuration",
+    "description": "Verify middleware doesn't block signup routes",
+    "acceptanceCriteria": [
+      "File middleware.ts exists",
+      "Log public routes configuration to notes",
+      "/free-trial is in public routes OR not blocked by auth",
+      "Run `npm run typecheck` - exits with code 0"
+    ]
+  }
+]
+```
+
+---
+
+## Task Sizing
 
 Each task must be completable in ONE iteration (~one context window).
 
 **Right-sized tasks:**
-- Add a database column + migration
-- Create a single UI component
-- Implement one server action
-- Add a filter to an existing list
-- Write tests for one module
+- Check one configuration file for specific values
+- Test one user interaction (click, type, submit)
+- Verify one redirect or navigation
+- Change one prop or configuration value
+- Add one CSS rule or style change
+- Test one viewport size
 
 **Too big (split these):**
-- "Build the entire dashboard" → Split into: schema, queries, components, filters
+- "Test the entire signup flow" → Split into: load page, test inputs, test submit, test redirect, test mobile
+- "Fix the bug" → Split into: identify file, make change, verify change, test regression
 - "Add authentication" → Split into: schema, middleware, login UI, session handling
 
-**Rule of thumb:** If you can't describe the change in 2-3 sentences, it's too big.
+---
 
-### Priority Ordering
+## Priority Ordering
 
 Set priority based on dependencies:
 
-1. Schema/database changes (migrations) - priority 1
-2. Server actions / backend logic - priority 2-3
-3. UI components that use the backend - priority 4-5
-4. Integration / E2E tests - highest priority numbers
+1. **Investigation tasks** - priority 1-3 (understand before changing)
+2. **Schema/database changes** - priority 4-5
+3. **Backend logic changes** - priority 6-7
+4. **UI component changes** - priority 8-9
+5. **Verification tasks** - priority 10+
 
 Lower priority number = executed first.
-
-### Acceptance Criteria
-
-Always include:
-- Quality check verification (e.g., "npm run typecheck passes")
-- Browser verification for UI tasks
-
-Criteria must be **verifiable**, not vague:
-- ❌ "Works correctly"
-- ✅ "Button shows confirmation dialog before deleting"
-
-### Branch Naming
-
-Use `compound/[feature-name]` format (or whatever prefix is in config):
-- `compound/task-priority`
-- `compound/email-notifications`
-- `compound/user-settings`
 
 ---
 
@@ -112,7 +239,7 @@ Use `compound/[feature-name]` format (or whatever prefix is in config):
 Read the PRD file the user specified
 ```
 
-### Step 2: Extract Tasks
+### Step 2: Extract High-Level Tasks
 
 Look for:
 - Tasks (T-001, T-002, etc.)
@@ -120,19 +247,28 @@ Look for:
 - Functional Requirements (FR-1, FR-2, etc.)
 - Any numbered/bulleted work items
 
-### Step 3: Order by Dependencies
+### Step 3: Explode Into Granular Tasks
+
+For each high-level task:
+1. List every distinct action required
+2. Separate investigation from implementation
+3. Separate each verification concern
+4. Ensure each has boolean pass/fail criteria
+
+### Step 4: Order by Dependencies
 
 Determine logical order:
-1. What needs to exist first? (database schema)
-2. What depends on that? (backend logic)
-3. What depends on that? (UI components)
-4. What verifies everything? (tests)
+1. What needs to be understood first? (investigation)
+2. What needs to exist first? (database schema)
+3. What depends on that? (backend logic)
+4. What depends on that? (UI components)
+5. What verifies everything? (browser tests)
 
-### Step 4: Generate prd.json
+### Step 5: Generate prd.json
 
 Create the JSON file with all tasks having `passes: false`.
 
-### Step 5: Save and Summarize
+### Step 6: Save and Summarize
 
 Save the file immediately, then output a brief summary:
 - Number of tasks created
@@ -144,38 +280,31 @@ Save the file immediately, then output a brief summary:
 
 ---
 
-## Example Conversion
+## Example: Debugging a Broken Page
 
-**From PRD:**
+**PRD Task:**
 ```markdown
-### T-001: Add priority field to database
-**Acceptance Criteria:**
-- [ ] Add priority column to tasks table
-- [ ] Generate and run migration
-- [ ] Quality checks pass
-
-### T-002: Display priority indicator
-**Acceptance Criteria:**
-- [ ] Task card shows colored badge
-- [ ] Quality checks pass
-- [ ] Verify in browser
+### T-001: Fix signup page with 0% conversion
+- Test the signup flow
+- Identify the bug
+- Fix it
+- Verify on mobile and desktop
 ```
 
-**To prd.json:**
+**Exploded to prd.json (10 tasks):**
 ```json
 {
   "project": "MyProject",
-  "branchName": "compound/task-priority",
-  "description": "Add priority levels to tasks",
+  "branchName": "compound/fix-signup",
+  "description": "Fix broken signup page",
   "tasks": [
     {
       "id": "T-001",
-      "title": "Add priority field to database",
-      "description": "Add priority column to tasks table for persistence.",
+      "title": "Load signup page and check for errors",
       "acceptanceCriteria": [
-        "Add priority column to tasks table: 'high' | 'medium' | 'low' (default 'medium')",
-        "Generate and run migration successfully",
-        "Quality checks pass"
+        "Navigate to /signup - page loads (status 200)",
+        "Screenshot saved to tmp/signup-desktop.png",
+        "Console errors saved to notes field (or 'none' if clean)"
       ],
       "priority": 1,
       "passes": false,
@@ -183,15 +312,114 @@ Save the file immediately, then output a brief summary:
     },
     {
       "id": "T-002",
-      "title": "Display priority indicator on task cards",
-      "description": "Show colored priority badge on each task card.",
+      "title": "Test signup page on mobile viewport",
       "acceptanceCriteria": [
-        "Each task card shows colored priority badge (red=high, yellow=medium, gray=low)",
-        "Priority visible without hovering or clicking",
-        "Quality checks pass",
-        "Verify in browser"
+        "Set viewport to 375x812 (iPhone)",
+        "Navigate to /signup - page loads",
+        "Screenshot saved to tmp/signup-mobile.png",
+        "CTA button visible in screenshot (not below fold)"
       ],
       "priority": 2,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "T-003",
+      "title": "Test email input field",
+      "acceptanceCriteria": [
+        "Email input field exists and is interactable",
+        "Type 'test@example.com' - value appears in field",
+        "No console errors after typing"
+      ],
+      "priority": 3,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "T-004",
+      "title": "Test password input field",
+      "acceptanceCriteria": [
+        "Password input field exists and is interactable",
+        "Type 'TestPassword123!' - value appears (masked)",
+        "No console errors after typing"
+      ],
+      "priority": 4,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "T-005",
+      "title": "Test form submission",
+      "acceptanceCriteria": [
+        "Click submit button - button responds to click",
+        "Loading state appears OR form submits",
+        "Log result to notes: success redirect URL or error message"
+      ],
+      "priority": 5,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "T-006",
+      "title": "Inspect SignUp component configuration",
+      "acceptanceCriteria": [
+        "Read file containing SignUp component",
+        "Log routing prop value to notes",
+        "Log forceRedirectUrl prop value to notes",
+        "Log any other relevant props to notes"
+      ],
+      "priority": 6,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "T-007",
+      "title": "Check middleware route protection",
+      "acceptanceCriteria": [
+        "Read middleware.ts file",
+        "Log public routes array to notes",
+        "Confirm /signup is accessible without auth"
+      ],
+      "priority": 7,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "T-008",
+      "title": "Implement fix based on findings",
+      "acceptanceCriteria": [
+        "Review notes from T-001 through T-007",
+        "Make targeted code change to fix identified issue",
+        "Run `npm run typecheck` - exits with code 0",
+        "Run `npm test` - exits with code 0"
+      ],
+      "priority": 8,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "T-009",
+      "title": "Verify fix on desktop",
+      "acceptanceCriteria": [
+        "Navigate to /signup",
+        "Complete full signup with test credentials",
+        "Redirect occurs to expected URL",
+        "No console errors during flow"
+      ],
+      "priority": 9,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "T-010",
+      "title": "Verify fix on mobile",
+      "acceptanceCriteria": [
+        "Set viewport to 375x812",
+        "Navigate to /signup",
+        "Complete full signup with test credentials",
+        "Redirect occurs to expected URL"
+      ],
+      "priority": 10,
       "passes": false,
       "notes": ""
     }
@@ -205,9 +433,12 @@ Save the file immediately, then output a brief summary:
 
 Before saving prd.json:
 
-- [ ] All tasks are small enough for one iteration
-- [ ] Priority order reflects dependencies
-- [ ] Every task has quality check verification
-- [ ] UI tasks have browser verification
-- [ ] Branch name follows correct format
+- [ ] **8-15 tasks** generated (not 3-5)
+- [ ] Each task does **ONE thing**
+- [ ] Investigation separated from implementation
+- [ ] Every criterion is **boolean pass/fail**
+- [ ] No vague words: "review", "identify", "document", "verify it works"
+- [ ] Commands specify expected exit code
+- [ ] Browser actions specify expected result
 - [ ] All tasks have `passes: false`
+- [ ] Priority order reflects dependencies
