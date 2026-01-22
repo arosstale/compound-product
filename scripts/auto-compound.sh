@@ -61,10 +61,7 @@ TASKS_DIR="$PROJECT_ROOT/tasks"
 command -v "$TOOL" >/dev/null 2>&1 || error "$TOOL CLI not found"
 command -v gh >/dev/null 2>&1 || error "gh CLI not found. Install with: brew install gh"
 command -v jq >/dev/null 2>&1 || error "jq not found. Install with: brew install jq"
-# Only require ANTHROPIC_API_KEY if using default analyze script
-if [ -z "$ANALYZE_COMMAND" ]; then
-  [ -n "$ANTHROPIC_API_KEY" ] || error "ANTHROPIC_API_KEY not set"
-fi
+# LLM provider check is handled by analyze-report.sh with helpful setup guidance
 
 cd "$PROJECT_ROOT"
 

@@ -57,7 +57,10 @@ flowchart TD
 - [Amp CLI](https://ampcode.com) or [Claude Code](https://docs.anthropic.com/en/docs/claude-code)
 - `jq` installed (`brew install jq` on macOS)
 - `gh` CLI installed and authenticated (`brew install gh`)
-- `ANTHROPIC_API_KEY` environment variable set
+- One of these LLM providers configured:
+  - **Anthropic:** `export ANTHROPIC_API_KEY=sk-ant-...`
+  - **OpenRouter:** `export OPENROUTER_API_KEY=sk-or-...`
+  - **AI Gateway:** `export AI_GATEWAY_URL=https://... AI_GATEWAY_API_KEY=...`
 
 ### Installation
 
@@ -244,10 +247,19 @@ Check `progress.txt` for errors. Common issues:
 
 ### Analysis fails
 
-Ensure `ANTHROPIC_API_KEY` is set:
+Ensure one of these LLM providers is configured:
 
 ```bash
+# Option 1: Anthropic API
 export ANTHROPIC_API_KEY=sk-ant-...
+
+# Option 2: OpenRouter
+export OPENROUTER_API_KEY=sk-or-...
+
+# Option 3: AI Gateway (any OpenAI-compatible endpoint)
+export AI_GATEWAY_URL=https://your-gateway.com/v1
+export AI_GATEWAY_API_KEY=your-key
+export AI_GATEWAY_MODEL=claude-sonnet-4-20250514  # optional
 ```
 
 ### Agent can't find tools
