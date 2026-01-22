@@ -100,7 +100,7 @@ case "$PROVIDER" in
       -H "x-api-key: $ANTHROPIC_API_KEY" \
       -H "anthropic-version: 2023-06-01" \
       -d "{
-        \"model\": \"claude-opus-4-20250514\",
+        \"model\": \"claude-opus-4-5-20251101\",
         \"max_tokens\": 1024,
         \"messages\": [{\"role\": \"user\", \"content\": $PROMPT_ESCAPED}]
       }")
@@ -112,7 +112,7 @@ case "$PROVIDER" in
       -H "Content-Type: application/json" \
       -H "Authorization: Bearer $OPENROUTER_API_KEY" \
       -d "{
-        \"model\": \"anthropic/claude-opus-4-20250514\",
+        \"model\": \"anthropic/claude-opus-4.5\",
         \"max_tokens\": 1024,
         \"messages\": [{\"role\": \"user\", \"content\": $PROMPT_ESCAPED}]
       }")
@@ -120,7 +120,7 @@ case "$PROVIDER" in
     ;;
     
   gateway)
-    MODEL="${AI_GATEWAY_MODEL:-anthropic/claude-opus-4-20250514}"
+    MODEL="${AI_GATEWAY_MODEL:-anthropic/claude-opus-4.5}"
     RESPONSE=$(curl -s "${AI_GATEWAY_URL}/chat/completions" \
       -H "Content-Type: application/json" \
       -H "Authorization: Bearer $AI_GATEWAY_AUTH_TOKEN" \
