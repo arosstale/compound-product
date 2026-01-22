@@ -16,6 +16,8 @@ Converts a PRD markdown document into the prd.json format for the execution loop
 3. Order by dependencies (schema → backend → UI → tests)
 4. Output to the specified prd.json location
 
+**Autonomous mode:** Do not ask questions. Use the PRD content and any provided context (branch name, output path) to generate prd.json immediately.
+
 ---
 
 ## Input
@@ -130,12 +132,15 @@ Determine logical order:
 
 Create the JSON file with all tasks having `passes: false`.
 
-### Step 5: Confirm
+### Step 5: Save and Summarize
 
-Show the user:
+Save the file immediately, then output a brief summary:
 - Number of tasks created
-- Task order with dependencies
+- Task order with priorities
 - Branch name
+- File path saved to
+
+**Do NOT wait for user confirmation.** Save the file and proceed.
 
 ---
 
