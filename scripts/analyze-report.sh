@@ -81,6 +81,7 @@ CONSTRAINTS:
 - Prefer fixes over new features
 - Prefer high-impact, low-effort items
 - Focus on UI/UX improvements, copy changes, bug fixes, or configuration changes
+- IMPORTANT: If the report has a 'Recently Fixed' section, do NOT pick items that were already addressed there
 
 REPORT:
 $REPORT_CONTENT
